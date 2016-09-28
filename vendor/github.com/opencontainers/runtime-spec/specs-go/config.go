@@ -320,6 +320,13 @@ type LinuxNetwork struct {
 	Priorities []LinuxInterfacePriority `json:"priorities,omitempty"`
 }
 
+// VTPM definition
+type VTPM struct {
+	Statepath string `json:"statepath,omitempty"`
+	TPMVersion string `json:"vtpmversion,omitempty"`
+	CreateCertificates bool `json:"createcerts,omitempty"`
+}
+
 // LinuxResources has container runtime resource constraints
 type LinuxResources struct {
 	// Devices configures the device whitelist.
@@ -336,6 +343,8 @@ type LinuxResources struct {
 	HugepageLimits []LinuxHugepageLimit `json:"hugepageLimits,omitempty"`
 	// Network restriction configuration
 	Network *LinuxNetwork `json:"network,omitempty"`
+	// VTPM configuration
+	VTPMs []VTPM `json:"vtpms"`
 }
 
 // LinuxDevice represents the mknod information for a Linux special device file

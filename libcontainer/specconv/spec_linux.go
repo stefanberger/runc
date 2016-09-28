@@ -14,6 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -188,6 +189,9 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		config.Mounts = append(config.Mounts, createLibcontainerMount(cwd, m))
 	}
 	if err := createDevices(spec, config); err != nil {
+		return nil, err
+	}
+	if err := createVTPMs(spec, config); err != nil {
 		return nil, err
 	}
 	if err := setupUserNamespace(spec, config); err != nil {
@@ -515,6 +519,37 @@ func stringToDeviceRune(s string) (rune, error) {
 	default:
 		return 0, fmt.Errorf("invalid device type %q", s)
 	}
+}
+
+func createVTPMs(spec *specs.Spec, config *configs.Config) error {
+	r := spec.Linux.Resources
+	if r == nil {
+		return nil
+	}
+
+	rootUID, err := config.HostRootUID()
+	if err != nil {
+		return err
+	}
+	rootGID, err := config.HostRootGID()
+	if err != nil {
+		return err
+	}
+
+	devnum := 0
+	for _, vtpm := range r.VTPMs {
+		err = vtpmhelper.CreateVTPM(spec, config, &vtpm, devnum, rootUID, rootGID)
+		if err != nil {
+			DestroyVTPMs(config)
+			return err
+		}
+		devnum++
+	}
+	return nil
+}
+
+func DestroyVTPMs(config *configs.Config) {
+	vtpmhelper.DestroyVTPMs(config)
 }
 
 func createDevices(spec *specs.Spec, config *configs.Config) error {
