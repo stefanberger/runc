@@ -5,34 +5,20 @@ package vtpmhelper
 import (
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/vtpm"
 
 	"github.com/opencontainers/runtime-spec/specs-go"
+
+	"golang.org/x/sys/unix"
 )
 
-// Create a VTPM
-func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, devnum int, uid int, gid int) error {
-
-	vtpm, err := vtpm.NewVTPM(vtpmdev.Statepath, vtpmdev.TPMVersion, vtpmdev.CreateCertificates)
-	if err != nil {
-		return err
-	}
-
-	// Start the vTPM process; once stopped, the device pair will
-	// also disappear
-	err, createdStatepath := vtpm.Start()
-	if err != nil {
-		return err
-	}
-
-	hostdev := vtpm.GetTPMDevname()
-	major, minor := vtpm.GetMajorMinor()
-
+func addVTPMDevice(spec *specs.Spec, config *configs.Config, devpath string, major, minor uint32) {
 	device := &configs.Device{
 		Type:        'c',
-		Path:        fmt.Sprintf("/dev/tpm%d", devnum),
+		Path:        devpath,
 		Major:       int64(major),
 		Minor:       int64(minor),
 		Permissions: "rwm",
@@ -57,6 +43,28 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 		Access: "rwm",
 	}
 	spec.Linux.Resources.Devices = append(spec.Linux.Resources.Devices, *ld)
+}
+
+// Create a VTPM
+func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, devnum int, uid int, gid int) error {
+
+	vtpm, err := vtpm.NewVTPM(vtpmdev.Statepath, vtpmdev.TPMVersion, vtpmdev.CreateCertificates)
+	if err != nil {
+		return err
+	}
+
+	// Start the vTPM process; once stopped, the device pair will
+	// also disappear
+	err, createdStatepath := vtpm.Start()
+	if err != nil {
+		return err
+	}
+
+	hostdev := vtpm.GetTPMDevname()
+	major, minor := vtpm.GetMajorMinor()
+
+	devpath := fmt.Sprintf("/dev/tpm%d", devnum)
+	addVTPMDevice(spec, config, devpath, major, minor)
 
 	config.VTPMs = append(config.VTPMs, vtpm)
 
@@ -65,6 +73,23 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 		if err := os.Chown(hostdev, uid, gid); err != nil {
 			vtpm.Stop(createdStatepath)
 			return err
+		}
+	}
+
+	// check if /dev/vtpmrm%d is available
+	host_tpmrm := fmt.Sprintf("/dev/tpmrm%d", vtpm.GetTPMDevNum())
+	if fileInfo, err := os.Lstat(host_tpmrm); err == nil {
+		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
+			devNumber := stat_t.Rdev
+			devpath = fmt.Sprintf("/dev/tpmrm%d", devnum)
+			addVTPMDevice(spec, config, devpath, uint32(unix.Major(devNumber)), uint32(unix.Minor(devNumber)))
+		}
+		if uid != 0 {
+			// adapt ownership of the device since only root can access it
+			if err := os.Chown(host_tpmrm, uid, gid); err != nil {
+				vtpm.Stop(createdStatepath)
+				return err
+			}
 		}
 	}
 
