@@ -451,6 +451,10 @@ func (vtpm *VTPM) GetTPMDevname() string {
 	return fmt.Sprintf("/dev/tpm%d", vtpm.tpm_dev_num)
 }
 
+func (vtpm *VTPM) GetTPMDevNum() uint32 {
+	return vtpm.tpm_dev_num
+}
+
 // Get the major and minor numbers of the created device;
 // This method can be called after Start()
 func (vtpm *VTPM) GetMajorMinor() (uint32, uint32) {
