@@ -27,13 +27,13 @@ type VTPM struct {
 	CreateCerts bool `json:"createCerts"`
 
 	// Version of the TPM
-	vtpmversion string
+	Vtpmversion string `json:"vtpmversion"`
 
 	// The user under which to run the TPM emulator
 	user string
 
 	// The TPM device number as returned from /dev/vtpmx ioctl
-	tpm_dev_num uint32
+	Tpm_dev_num uint32 `json:"tpm_dev_num"`
 
 	// The backend file descriptor
 	fd int32
@@ -116,10 +116,10 @@ func NewVTPM(statepath, vtpmversion string, createcerts bool) (*VTPM, error) {
 	}
 
 	return &VTPM{
-		tpm_dev_num: VTPM_DEV_NUM_INVALID,
+		Tpm_dev_num: VTPM_DEV_NUM_INVALID,
 		user:        "tss",
 		StatePath:   statepath,
-		vtpmversion: vtpmversion,
+		Vtpmversion: vtpmversion,
 		CreateCerts: createcerts,
 	}, nil
 }
@@ -129,12 +129,12 @@ func (vtpm *VTPM) createDev() error {
 		vtpm_proxy_new_dev vtpm_proxy_new_dev
 	)
 
-	if vtpm.tpm_dev_num != VTPM_DEV_NUM_INVALID {
+	if vtpm.Tpm_dev_num != VTPM_DEV_NUM_INVALID {
 		logrus.Info("Device already exists")
 		return nil
 	}
 
-	if vtpm.vtpmversion == VTPM_VERSION_2 {
+	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		vtpm_proxy_new_dev.flags = VTPM_FLAG_TPM2
 	}
 
@@ -143,7 +143,7 @@ func (vtpm *VTPM) createDev() error {
 		return err
 	}
 
-	vtpm.tpm_dev_num = vtpm_proxy_new_dev.tpm_dev_num
+	vtpm.Tpm_dev_num = vtpm_proxy_new_dev.tpm_dev_num
 	vtpm.fd = vtpm_proxy_new_dev.fd
 	vtpm.major = vtpm_proxy_new_dev.major
 	vtpm.minor = vtpm_proxy_new_dev.minor
@@ -166,7 +166,7 @@ func (vtpm *VTPM) getPidFromFile() (int, error) {
 		return -1, err
 	}
 	if len(d) == 0 {
-		return -1, fmt.Errorf("Empty Pidfile")
+		return -1, fmt.Errorf("Empty pid file")
 	}
 
 	pid, err := strconv.Atoi(string(d))
@@ -190,8 +190,32 @@ func (vtpm *VTPM) waitForPidFile(loops int) (int, error) {
 	return -1, fmt.Errorf("swtpm's pid file did not appear")
 }
 
+func (vtpm *VTPM) shutdown() error {
+	var err error = nil
+
+	if vtpm.Tpm_dev_num != VTPM_DEV_NUM_INVALID && vtpm.Vtpmversion == VTPM_VERSION_2 {
+		devname := vtpm.GetTPMDevname()
+		dev, err := os.OpenFile(devname, os.O_RDWR, 0666)
+		if err != nil {
+			logrus.Errorf("Could not open %s: %v", devname, err)
+			return err
+		}
+		defer dev.Close()
+
+		sd := []byte{0x80, 0x01, 0x00, 0x00, 0x00, 0x0c,
+			0x00, 0x00, 0x01, 0x45, 0x00, 0x00}
+		n, err := dev.Write(sd)
+		if err != nil || n != len(sd) {
+			logrus.Errorf("Could not write shutdown to %s: %v", devname, err)
+		}
+	}
+	return err
+}
+
 // stopByPidFile: Stop the vTPM by its PID file
 func (vtpm *VTPM) stopByPidFile() error {
+
+	vtpm.shutdown()
 
 	pid, err := vtpm.getPidFromFile()
 	if err != nil {
@@ -285,7 +309,7 @@ func (vtpm *VTPM) setup(createCerts bool) error {
 		cmd.Args = append(cmd.Args, "--create-ek-cert", "--create-platform-cert", "--lock-nvram")
 	}
 
-	if vtpm.vtpmversion == VTPM_VERSION_2 {
+	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	}
 
@@ -369,7 +393,7 @@ again:
 	logfile := fmt.Sprintf("file=%s", vtpm.getLogFile())
 
 	cmd := exec.Command("swtpm", "chardev", "--tpmstate", tpmstate, "--daemon", "--fd", fdstr, "--pid", pidfile, "--log", logfile, "--runas", vtpm.user)
-	if vtpm.vtpmversion == VTPM_VERSION_2 {
+	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	}
 	file := os.NewFile(uintptr(vtpm.fd), "[vtpm]")
@@ -397,7 +421,7 @@ again:
 	}
 
 	cmd = exec.Command("swtpm_bios", "-n", "-cs", "-u", "--tpm-device", tpmname)
-	if vtpm.vtpmversion == VTPM_VERSION_2 {
+	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	} else {
 		// make sure the TPM 1.2 is activated
@@ -437,7 +461,7 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 
 	vtpm.CloseServer()
 
-	vtpm.tpm_dev_num = VTPM_DEV_NUM_INVALID
+	vtpm.Tpm_dev_num = VTPM_DEV_NUM_INVALID
 
 	if deleteStatePath {
 		vtpm.DeleteStatePath()
@@ -448,11 +472,11 @@ func (vtpm *VTPM) Stop(deleteStatePath bool) error {
 
 // Get the TPM device name; this method can be called after Start()
 func (vtpm *VTPM) GetTPMDevname() string {
-	return fmt.Sprintf("/dev/tpm%d", vtpm.tpm_dev_num)
+	return fmt.Sprintf("/dev/tpm%d", vtpm.Tpm_dev_num)
 }
 
 func (vtpm *VTPM) GetTPMDevNum() uint32 {
-	return vtpm.tpm_dev_num
+	return vtpm.Tpm_dev_num
 }
 
 // Get the major and minor numbers of the created device;
