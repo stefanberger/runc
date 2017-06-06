@@ -396,6 +396,7 @@ again:
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
 	}
+	cmd.Args = append(cmd.Args, "--locality", "reject-locality-4,allow-set-locality", "--flags", "not-need-init")
 	file := os.NewFile(uintptr(vtpm.fd), "[vtpm]")
 	cmd.ExtraFiles = append(cmd.ExtraFiles, file)
 
