@@ -27,6 +27,8 @@
 /* Get all of the CLONE_NEW* flags. */
 #include "namespace.h"
 
+#define CLONE_NEWIMA 0x00001000
+
 /* Synchronisation values. */
 enum sync_t {
 	SYNC_USERMAP_PLS = 0x40, /* Request parent to map our users. */
@@ -719,6 +721,7 @@ void nsexec(void)
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
+			config.cloneflags |= CLONE_NEWIMA;
 			if (unshare(config.cloneflags) < 0)
 				bail("failed to unshare namespaces");
 
