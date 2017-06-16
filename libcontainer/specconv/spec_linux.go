@@ -191,10 +191,10 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err := createDevices(spec, config); err != nil {
 		return nil, err
 	}
-	if err := createVTPMs(spec, config); err != nil {
+	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	if err := setupUserNamespace(spec, config); err != nil {
+	if err := createVTPMs(spec, config); err != nil {
 		return nil, err
 	}
 	c, err := createCgroupConfig(opts)
