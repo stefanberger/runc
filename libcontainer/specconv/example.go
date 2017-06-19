@@ -150,6 +150,9 @@ func Example() *specs.Spec {
 				{
 					Type: "mount",
 				},
+				{
+					Type: "ima",
+				},
 			},
 		},
 	}
