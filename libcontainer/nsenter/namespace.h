@@ -28,5 +28,8 @@
 #ifndef CLONE_NEWNET
 #	define CLONE_NEWNET 0x40000000 /* New network namespace */
 #endif
+#ifndef CLONE_NEWIMA
+#	define CLONE_NEWIMA 0x00001000 /* New IMA namespace */
+#endif
 
 #endif /* NSENTER_NAMESPACE_H */
