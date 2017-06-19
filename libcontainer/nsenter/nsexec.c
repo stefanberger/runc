@@ -276,6 +276,8 @@ static int nsflag(char *name)
 		return CLONE_NEWUSER;
 	else if (!strcmp(name, "uts"))
 		return CLONE_NEWUTS;
+	else if (!strcmp(name, "ima"))
+		return CLONE_NEWIMA;
 
 	/* If we don't recognise a name, fallback to 0. */
 	return 0;

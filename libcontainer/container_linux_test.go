@@ -144,6 +144,7 @@ func TestGetContainerState(t *testing.T) {
 				{Type: configs.NEWNS},
 				{Type: configs.NEWNET, Path: expectedNetworkPath},
 				{Type: configs.NEWUTS},
+				{Type: configs.NEWIMA},
 				// emulate host for IPC
 				//{Type: configs.NEWIPC},
 			},
@@ -208,6 +209,8 @@ func TestGetContainerState(t *testing.T) {
 				file = "user"
 			case configs.NEWUTS:
 				file = "uts"
+			case configs.NEWIMA:
+				file = "ima"
 			}
 			expected := fmt.Sprintf("/proc/%d/ns/%s", pid, file)
 			if expected != path {

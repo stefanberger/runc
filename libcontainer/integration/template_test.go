@@ -111,6 +111,7 @@ func newTemplateConfig(rootfs string) *configs.Config {
 			{Type: configs.NEWIPC},
 			{Type: configs.NEWPID},
 			{Type: configs.NEWNET},
+			{Type: configs.NEWIMA},
 		}),
 		Cgroups: &configs.Cgroup{
 			Path: "integration/test",
