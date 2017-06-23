@@ -186,6 +186,9 @@ type Config struct {
 
 	// Rootless specifies whether the container is a rootless container.
 	Rootless bool `json:"rootless"`
+
+	// IMA policy from host filesystem
+	IMAPolicy string `json:"imapolicy"`
 }
 
 type Hooks struct {
