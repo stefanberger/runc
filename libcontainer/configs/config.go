@@ -194,6 +194,9 @@ type Config struct {
 
 	// VTPM configuration
 	VTPMs []*vtpm.VTPM `json:"vtpms"`
+
+	// IMA policy from host filesystem
+	IMAPolicy string `json:"imapolicy"`
 }
 
 type Hooks struct {

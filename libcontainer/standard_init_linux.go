@@ -10,6 +10,7 @@ import (
 
 	"github.com/opencontainers/runc/libcontainer/apparmor"
 	"github.com/opencontainers/runc/libcontainer/configs"
+	"github.com/opencontainers/runc/libcontainer/ima"
 	"github.com/opencontainers/runc/libcontainer/keys"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -64,6 +65,14 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
+	ima, err := ima.NewIMA([]byte(l.config.Config.IMAPolicy));
+	if err != nil {
+		return err
+	}
+	if err := ima.ApplyPolicy(); err != nil {
+		return err
+	}
+
 	label.Init()
 
 	// prepareRootfs() can be executed only for a new mount namespace.
@@ -96,6 +105,9 @@ func (l *linuxStandardInit) Init() error {
 		if err := unix.Sethostname([]byte(hostname)); err != nil {
 			return err
 		}
+	}
+	if err := ima.ApplyPolicyContainer(); err != nil {
+		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {
 		return err
