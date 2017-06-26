@@ -48,14 +48,18 @@ func (l *linuxStandardInit) getSessionRingParams() (string, uint32, uint32) {
 const PR_SET_NO_NEW_PRIVS = 0x26
 
 func (l *linuxStandardInit) Init() error {
+	var (
+		sessKeyId keys.KeySerial = keys.KEY_PARENT_SESSION
+	)
 	if !l.config.Config.NoNewKeyring {
 		ringname, keepperms, newperms := l.getSessionRingParams()
 
 		// do not inherit the parent's session keyring
-		sessKeyId, err := keys.JoinSessionKeyring(ringname)
+		mysessKeyId, err := keys.JoinSessionKeyring(ringname)
 		if err != nil {
 			return err
 		}
+		sessKeyId = mysessKeyId
 		// make session keyring searcheable
 		if err := keys.ModKeyringPerm(sessKeyId, keepperms, newperms); err != nil {
 			return err
@@ -69,11 +73,11 @@ func (l *linuxStandardInit) Init() error {
 		return err
 	}
 
-	ima, err := ima.NewIMA([]byte(l.config.Config.IMAPolicy));
+	ima, err := ima.NewIMA([]byte(l.config.Config.IMAPolicy), l.config.Config.IMAKeys, sessKeyId)
 	if err != nil {
 		return err
 	}
-	if err := ima.ApplyPolicy(); err != nil {
+	if err := ima.ApplyKeysAndPolicy(); err != nil {
 		return err
 	}
 
@@ -110,7 +114,11 @@ func (l *linuxStandardInit) Init() error {
 			return err
 		}
 	}
-	if err := ima.ApplyPolicyContainer(); err != nil {
+	if err := ima.ApplyKeysAndPolicyContainer(); err != nil {
+		return err
+	}
+	// make session keyring read-only and have it kept that way
+	if err := keys.ModKeyringPerm(sessKeyId, ^uint32(0x24242424), 0x0); err != nil {
 		return err
 	}
 	if err := apparmor.ApplyProfile(l.config.AppArmorProfile); err != nil {

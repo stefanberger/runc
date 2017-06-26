@@ -189,6 +189,9 @@ type Config struct {
 
 	// IMA policy from host filesystem
 	IMAPolicy string `json:"imapolicy"`
+
+	// IMA Keys
+	IMAKeys [][]byte `json:"imakeys"`
 }
 
 type Hooks struct {

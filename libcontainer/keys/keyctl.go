@@ -15,6 +15,8 @@ const KEYCTL_JOIN_SESSION_KEYRING = 1
 const KEYCTL_SETPERM = 5
 const KEYCTL_DESCRIBE = 6
 
+const KEY_PARENT_SESSION = 0xfffffffd
+
 type KeySerial uint32
 
 func JoinSessionKeyring(name string) (KeySerial, error) {
@@ -64,4 +66,42 @@ func ModKeyringPerm(ringId KeySerial, mask, setbits uint32) error {
 	}
 
 	return nil
+}
+
+func CreateKeyring(name string, parentRing KeySerial) (KeySerial, error) {
+        return AddKey("keyring", name, nil, 0, parentRing)
+}
+
+func AddKey(keytype, description string, payload []byte, plen int, ringId KeySerial) (KeySerial, error) {
+        var (
+                _keytype     *byte = nil
+                _description *byte = nil
+                _payload     *byte = nil
+                err          error
+        )
+
+        if len(keytype) > 0 {
+                _keytype, err = unix.BytePtrFromString(keytype)
+                if err != nil {
+                        return 0, err
+                }
+        }
+
+        if len(description) > 0 {
+                _description, err = unix.BytePtrFromString(description)
+                if err != nil {
+                        return 0, err
+                }
+        }
+
+        if payload != nil {
+                _payload = &payload[0]
+        }
+
+        id, _, error := unix.Syscall6(unix.SYS_ADD_KEY, uintptr(unsafe.Pointer(_keytype)), uintptr(unsafe.Pointer(_description)), uintptr(unsafe.Pointer(_payload)), uintptr(plen), uintptr(ringId), 0)
+        if error != 0 {
+                return 0, error
+        }
+
+	return KeySerial(id), nil
 }
