@@ -80,6 +80,8 @@ func (c Cap) String() string {
 		return "block_suspend"
 	case CAP_AUDIT_READ:
 		return "audit_read"
+	case CAP_INTEGRITY_ADMIN:
+		return "integrity_admin"
 	}
 	return "unknown"
 }
@@ -125,5 +127,6 @@ func List() []Cap {
 		CAP_WAKE_ALARM,
 		CAP_BLOCK_SUSPEND,
 		CAP_AUDIT_READ,
+		CAP_INTEGRITY_ADMIN,
 	}
 }
