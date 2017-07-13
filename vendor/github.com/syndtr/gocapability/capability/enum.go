@@ -258,6 +258,9 @@ const (
 
 	// Allow reading audit messages from the kernel
 	CAP_AUDIT_READ = Cap(37)
+
+	// Allow writing security.ima extended attribute
+	CAP_INTEGRITY_ADMIN = Cap(38)
 )
 
 var (
