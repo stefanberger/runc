@@ -118,6 +118,7 @@ __runc_complete_capabilities() {
 		DAC_READ_SEARCH
 		FOWNER
 		FSETID
+		INTEGRITY_ADMIN
 		IPC_LOCK
 		IPC_OWNER
 		KILL
