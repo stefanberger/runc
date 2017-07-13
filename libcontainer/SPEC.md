@@ -284,6 +284,7 @@ provide a good default for security and flexibility for the applications.
 | CAP_LEASE            | 0       |
 | CAP_WAKE_ALARM       | 0       |
 | CAP_BLOCK_SUSPEND    | 0       |
+| CAP_INTEGRITY_ADMIN  | 0       |
 
 
 Additional security layers like [apparmor](https://wiki.ubuntu.com/AppArmor)
