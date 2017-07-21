@@ -531,8 +531,12 @@ void join_namespaces(char *nslist)
 	for (i = 0; i < num; i++) {
 		struct namespace_t ns = namespaces[i];
 
-		if (setns(ns.fd, ns.ns) < 0)
+		/* hack: join an IMA namespace */
+		if (ns.ns == CLONE_NEWIMA)
+			ns.ns = CLONE_NEWNS;
+		if (setns(ns.fd, ns.ns) < 0) {
 			bail("failed to setns to %s", ns.path);
+		}
 
 		close(ns.fd);
 	}
@@ -843,6 +847,7 @@ void nsexec(void)
 			 * some old kernel versions where clone(CLONE_PARENT | CLONE_NEWPID)
 			 * was broken, so we'll just do it the long way anyway.
 			 */
+			config.cloneflags &= ~CLONE_NEWIMA;
 			if (unshare(config.cloneflags) < 0)
 				bail("failed to unshare namespaces");
 
