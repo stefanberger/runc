@@ -15,7 +15,7 @@ var namespaceInfo = map[NamespaceType]int{
 	NEWIPC:  unix.CLONE_NEWIPC,
 	NEWUTS:  unix.CLONE_NEWUTS,
 	NEWPID:  unix.CLONE_NEWPID,
-	NEWIMA:  0x1000, //unix.CLONE_NEWIMA,
+	NEWIMA:  unix.CLONE_NEWNS,
 }
 
 // CloneFlags parses the container's Namespaces options to set the correct
