@@ -60,6 +60,8 @@ const (
 
 	VTPM_PROXY_IOC_NEW_DEV = 0xc014a100
 
+	VTPM_PROXY_IOC_TRANSFER_IMA = 0x0000a110
+
 	VTPM_VERSION_1_2 = "1.2"
 	VTPM_VERSION_2   = "2"
 
@@ -89,6 +91,14 @@ func vtpmx_ioctl(cmd, msg uintptr) error {
 	}
 
 	return nil
+}
+
+func TransferIMA(anonfd int) error {
+	return ioctl(uintptr(anonfd), VTPM_PROXY_IOC_TRANSFER_IMA, 0)
+}
+
+func (vtpm *VTPM) GetAnonFD() int32 {
+	return vtpm.fd
 }
 
 // Create a new VTPM object
