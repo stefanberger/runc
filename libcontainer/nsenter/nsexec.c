@@ -88,7 +88,13 @@ struct nlconfig_t {
 	size_t uidmappath_len;
 	char *gidmappath;
 	size_t gidmappath_len;
+
+	/* vTPM file descriptor */
+	int32_t vtpmfd;
 };
+
+/* ioctl for vtpm proxy device */
+#define VTPM_PROXY_IOC_TRANSFER_IMA  _IO(0xa1, 0x10)
 
 /*
  * List of netlink message types sent to us as part of bootstrapping the init.
@@ -104,6 +110,7 @@ struct nlconfig_t {
 #define ROOTLESS_ATTR	    27287
 #define UIDMAPPATH_ATTR	    27288
 #define GIDMAPPATH_ATTR	    27289
+#define VTPMFD_ATTR		27290
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -450,6 +457,9 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 		case SETGROUP_ATTR:
 			config->is_setgroup = readint8(current);
 			break;
+		case VTPMFD_ATTR:
+			config->vtpmfd = readint32(current);
+			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
 		}
@@ -528,12 +538,22 @@ void join_namespaces(char *nslist)
 	free(namespaces);
 }
 
+void ima_namespace_set_vtpm(int vtpmfd)
+{
+	int n = ioctl(vtpmfd, VTPM_PROXY_IOC_TRANSFER_IMA);
+	/* ENOTTY: driver too old */
+	if (n && n != ENOTTY) {
+		bail("Error transferring VTPM to IMA: %s", strerror(errno));
+	}
+}
+
 void nsexec(void)
 {
 	int pipenum;
 	jmp_buf env;
 	int sync_child_pipe[2], sync_grandchild_pipe[2];
 	struct nlconfig_t config = {0};
+	config.vtpmfd = -1;
 
 	/*
 	 * If we don't have an init pipe, just return to the go routine.
@@ -810,6 +830,7 @@ void nsexec(void)
 			if (config.namespaces)
 				join_namespaces(config.namespaces);
 
+
 			/*
 			 * Unshare all of the namespaces. Now, it should be noted that this
 			 * ordering might break in the future (especially with rootless
@@ -823,6 +844,8 @@ void nsexec(void)
 			if (unshare(config.cloneflags) < 0)
 				bail("failed to unshare namespaces");
 
+			if (config.vtpmfd > 0)
+				ima_namespace_set_vtpm(config.vtpmfd);
 			/*
 			 * Deal with user namespaces first. They are quite special, as they
 			 * affect our ability to unshare other namespaces and are used as

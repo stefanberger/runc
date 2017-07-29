@@ -1700,6 +1700,15 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		Value: uint32(cloneFlags),
 	})
 
+	// write vTPM file descriptor
+	if len(c.config.VTPMs) > 0 {
+		vtpmfd := c.config.VTPMs[0].GetAnonFD()
+		r.AddData(&Int32msg{
+			Type:  VTpmFDAttr,
+			Value: uint32(vtpmfd),
+		})
+	}
+
 	// write custom namespace paths
 	if len(nsMaps) > 0 {
 		nsPaths, err := c.orderNamespacePaths(nsMaps)
