@@ -73,8 +73,8 @@ func (ima *IMA) ApplyPolicyContainer() error {
 	return nil
 }
 
-// create an _ima keyring underneath the parent keyring
-func setupIMARing(parentRing keyctl.KeySerial) (keyctl.KeySerial, error) {
+// create an keyring, e.g. _ima, underneath the parent keyring
+func setupIMARing(parentRing keyctl.KeySerial, ringname string) (keyctl.KeySerial, error) {
 	if (parentRing == keyctl.KEY_PARENT_SESSION) {
 		return 0, fmt.Errorf("Must have a proper parent keyring; cannot be 0xffffffff")
 	}
@@ -83,7 +83,7 @@ func setupIMARing(parentRing keyctl.KeySerial) (keyctl.KeySerial, error) {
 	if err := keyctl.ModKeyringPerm(parentRing, 0xffffffff, 0x80000); err != nil {
 		return 0, err
 	}
-	return keyctl.CreateKeyring("_ima", parentRing)
+	return keyctl.CreateKeyring(ringname, parentRing)
 }
 
 // Given user-provided keys, load them on the IMA namespace specific keyring.
@@ -94,7 +94,7 @@ func (ima *IMA) ApplyKeys() error {
 			return fmt.Errorf("IMA namespacing not supported by kernel")
 		}
 
-		ringId, err := setupIMARing(ima.sessRingId)
+		ringId, err := setupIMARing(ima.sessRingId, "_ima")
 		if err != nil {
 			return err
 		}
@@ -123,39 +123,44 @@ func (ima *IMA) ApplyKeys() error {
 	return nil
 }
 
+// Apply keys found in a given directory and link them to the keyring
+// with the given name
+func (ima *IMA) applyKeysContainer(dirname, ringname string) (error, keyctl.KeySerial) {
+	fileInfos, err := ioutil.ReadDir(dirname)
+	if err != nil {
+		// missing dir is not an error
+		return nil, 0
+	}
+
+	var ringId keyctl.KeySerial = 0
+
+	for _, fileInfo := range fileInfos {
+		if !fileInfo.IsDir() {
+			if ringId == 0 {
+				ringId, err = setupIMARing(ima.sessRingId, ringname)
+				if err != nil {
+					return err, 0
+				}
+			}
+
+			filename := fmt.Sprintf("%s/%s", dirname, fileInfo.Name())
+
+			// failing to load a key onto the keyring is not an error
+			evmctl.LoadKeyOnKeyring(ringId, filename)
+		}
+	}
+
+	// make the keyring read-only and have it kept that way
+	if err := keyctl.ModKeyringPerm(ringId, ^uint32(0x24242424), 0); err != nil {
+		return err, 0
+	}
+	return nil, ringId
+}
+
 // Apply keys found inside the container unless a key was explicity provided
 func (ima *IMA) ApplyKeysContainer() error {
 	if ima.hasIMANS && len(ima.keys) == 0 {
-		dirname := "/etc/keys/ima"
-
-		fileInfos, err := ioutil.ReadDir(dirname)
-		if err != nil {
-			// missing dir is not an error
-			return nil
-		}
-
-		var ringId keyctl.KeySerial = 0
-
-		for _, fileInfo := range fileInfos {
-			if !fileInfo.IsDir() {
-				if ringId == 0 {
-					ringId, err = setupIMARing(ima.sessRingId)
-					if err != nil {
-						return err
-					}
-				}
-
-				filename := fmt.Sprintf("%s/%s", dirname, fileInfo.Name())
-
-				// failing to load a key onto the keyring is not an error
-				evmctl.LoadKeyOnKeyring(ringId, filename)
-			}
-		}
-
-		// make the keyring read-only and have it kept that way
-		if err := keyctl.ModKeyringPerm(ringId, ^uint32(0x24242424), 0); err != nil {
-			return err
-		}
+		ima.applyKeysContainer("/etc/keys/ima", "_ima")
 	}
 
 	return nil
