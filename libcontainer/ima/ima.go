@@ -124,8 +124,9 @@ func (ima *IMA) ApplyKeys() error {
 }
 
 // Apply keys found in a given directory and link them to the keyring
-// with the given name
-func (ima *IMA) applyKeysContainer(dirname, ringname string) (error, keyctl.KeySerial) {
+// with the given name; new keys may be subject to restrictions due
+// to another restrictions keyring
+func (ima *IMA) applyKeysContainer(dirname, ringname string, restrictRingId keyctl.KeySerial) (error, keyctl.KeySerial) {
 	fileInfos, err := ioutil.ReadDir(dirname)
 	if err != nil {
 		// missing dir is not an error
@@ -141,18 +142,32 @@ func (ima *IMA) applyKeysContainer(dirname, ringname string) (error, keyctl.KeyS
 				if err != nil {
 					return err, 0
 				}
+				if restrictRingId != 0 {
+					_, err = keyctl.RestrictKeyring(ringId, restrictRingId)
+					if err != nil {
+						return err, 0
+					}
+				}
 			}
 
 			filename := fmt.Sprintf("%s/%s", dirname, fileInfo.Name())
 
 			// failing to load a key onto the keyring is not an error
-			evmctl.LoadKeyOnKeyring(ringId, filename)
+			keyId, err := evmctl.LoadKeyOnKeyring(ima.sessRingId, filename)
+			if err == nil {
+				// use link so that the restricted keyring checking is invoked
+				// if it is used
+				_, err = keyctl.Link(keyId, ringId)
+				keyctl.Unlink(keyId, ima.sessRingId)
+			}
 		}
 	}
 
 	// make the keyring read-only and have it kept that way
-	if err := keyctl.ModKeyringPerm(ringId, ^uint32(0x24242424), 0); err != nil {
-		return err, 0
+	if ringId != 0 {
+		if err := keyctl.ModKeyringPerm(ringId, ^uint32(0x24242424), 0); err != nil {
+			return err, 0
+		}
 	}
 	return nil, ringId
 }
@@ -160,7 +175,14 @@ func (ima *IMA) applyKeysContainer(dirname, ringname string) (error, keyctl.KeyS
 // Apply keys found inside the container unless a key was explicity provided
 func (ima *IMA) ApplyKeysContainer() error {
 	if ima.hasIMANS && len(ima.keys) == 0 {
-		ima.applyKeysContainer("/etc/keys/ima", "_ima")
+		err, caRingId := ima.applyKeysContainer("/etc/keys/ima/ca", "_ima_ca", 0)
+		if err != nil {
+			return err
+		}
+		err, _ = ima.applyKeysContainer("/etc/keys/ima", "_ima", caRingId)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
