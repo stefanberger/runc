@@ -14,10 +14,10 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func addVTPMDevice(spec *specs.Spec, config *configs.Config, devpath string, major, minor uint32) {
+func addVTPMDevice(spec *specs.Spec, config *configs.Config, hostpath string, major, minor uint32) {
 	device := &configs.Device{
 		Type:        'c',
-		Path:        devpath,
+		Path:        hostpath,
 		Major:       int64(major),
 		Minor:       int64(minor),
 		Permissions: "rwm",
@@ -62,8 +62,7 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 	hostdev := vtpm.GetTPMDevname()
 	major, minor := vtpm.GetMajorMinor()
 
-	devpath := fmt.Sprintf("/dev/tpm%d", devnum)
-	addVTPMDevice(spec, config, devpath, major, minor)
+	addVTPMDevice(spec, config, hostdev, major, minor)
 
 	config.VTPMs = append(config.VTPMs, vtpm)
 
@@ -80,8 +79,7 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 	if fileInfo, err := os.Lstat(host_tpmrm); err == nil {
 		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
 			devNumber := int(stat_t.Rdev)
-			devpath = fmt.Sprintf("/dev/tpmrm%d", devnum)
-			addVTPMDevice(spec, config, devpath, uint32(devices.Major(devNumber)), uint32(devices.Minor(devNumber)))
+			addVTPMDevice(spec, config, host_tpmrm, uint32(devices.Major(devNumber)), uint32(devices.Minor(devNumber)))
 		}
 		if uid != 0 {
 			// adapt ownership of the device since only root can access it
