@@ -18,6 +18,9 @@ type Device struct {
 	// Path to the device.
 	Path string `json:"path"`
 
+	// the name of the device inside the container (optional)
+	Devpath string `json:"devpath"`
+
 	// Major is the device's major number.
 	Major int64 `json:"major"`
 

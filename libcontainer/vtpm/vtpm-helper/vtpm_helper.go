@@ -15,10 +15,11 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func addVTPMDevice(spec *specs.Spec, config *configs.Config, hostpath string, major, minor uint32) {
+func addVTPMDevice(spec *specs.Spec, config *configs.Config, hostpath, devpath string, major, minor uint32) {
 	device := &configs.Device{
 		Type:        'c',
 		Path:        hostpath,
+		Devpath:     devpath,
 		Major:       int64(major),
 		Minor:       int64(minor),
 		Permissions: "rwm",
@@ -63,7 +64,8 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 	hostdev := vtpm.GetTPMDevname()
 	major, minor := vtpm.GetMajorMinor()
 
-	addVTPMDevice(spec, config, hostdev, major, minor)
+	devpath := fmt.Sprintf("/dev/tpm%d", devnum)
+	addVTPMDevice(spec, config, hostdev, devpath, major, minor)
 
 	config.VTPMs = append(config.VTPMs, vtpm)
 
@@ -80,7 +82,9 @@ func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, d
 	if fileInfo, err := os.Lstat(host_tpmrm); err == nil {
 		if stat_t, ok := fileInfo.Sys().(*syscall.Stat_t); ok {
 			devNumber := stat_t.Rdev
-			addVTPMDevice(spec, config, host_tpmrm, uint32(unix.Major(devNumber)), uint32(unix.Minor(devNumber)))
+
+			devpath = fmt.Sprintf("/dev/tpmrm%d", devnum)
+			addVTPMDevice(spec, config, host_tpmrm, devpath, uint32(unix.Major(devNumber)), uint32(unix.Minor(devNumber)))
 		}
 		if uid != 0 {
 			// adapt ownership of the device since only root can access it
