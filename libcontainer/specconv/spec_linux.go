@@ -194,14 +194,6 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 	if err := setupUserNamespace(spec, config); err != nil {
 		return nil, err
 	}
-	if err := createVTPMs(spec, config); err != nil {
-		return nil, err
-	}
-	c, err := createCgroupConfig(opts)
-	if err != nil {
-		return nil, err
-	}
-	config.Cgroups = c
 	// set linux-specific config
 	if spec.Linux != nil {
 		if config.RootPropagation, exists = mountPropagationMapping[spec.Linux.RootfsPropagation]; !exists {
@@ -237,6 +229,14 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 			config.Seccomp = seccomp
 		}
 	}
+	if err := createVTPMs(spec, config); err != nil {
+		return nil, err
+	}
+	c, err := createCgroupConfig(opts)
+	if err != nil {
+		return nil, err
+	}
+	config.Cgroups = c
 	if spec.Process.SelinuxLabel != "" {
 		config.ProcessLabel = spec.Process.SelinuxLabel
 	}
