@@ -127,7 +127,7 @@ func NewVTPM(statepath, vtpmversion string, createcerts bool) (*VTPM, error) {
 
 	return &VTPM{
 		Tpm_dev_num: VTPM_DEV_NUM_INVALID,
-		user:        "tss",
+		user:        "root",
 		StatePath:   statepath,
 		Vtpmversion: vtpmversion,
 		CreateCerts: createcerts,
