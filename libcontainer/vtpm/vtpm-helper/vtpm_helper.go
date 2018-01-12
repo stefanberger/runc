@@ -49,7 +49,7 @@ func addVTPMDevice(spec *specs.Spec, config *configs.Config, hostpath, devpath s
 // Create a VTPM
 func CreateVTPM(spec *specs.Spec, config *configs.Config, vtpmdev *specs.VTPM, devnum int, uid int, gid int) error {
 
-	vtpm, err := vtpm.NewVTPM(vtpmdev.Statepath, vtpmdev.TPMVersion, vtpmdev.CreateCertificates)
+	vtpm, err := vtpm.NewVTPM(vtpmdev.Statepath, vtpmdev.StatepathIsManaged, vtpmdev.TPMVersion, vtpmdev.CreateCertificates)
 	if err != nil {
 		return err
 	}

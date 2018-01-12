@@ -323,6 +323,7 @@ type LinuxNetwork struct {
 // VTPM definition
 type VTPM struct {
 	Statepath string `json:"statepath,omitempty"`
+	StatepathIsManaged bool `json:"statepathismanaged,omitempty"`
 	TPMVersion string `json:"vtpmversion,omitempty"`
 	CreateCertificates bool `json:"createcerts,omitempty"`
 }
