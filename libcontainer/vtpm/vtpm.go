@@ -314,7 +314,8 @@ func (vtpm *VTPM) createStatePath() (bool, error) {
 
 func (vtpm *VTPM) setup(createCerts bool) error {
 	cmd := exec.Command("swtpm_setup", "--tpm-state", vtpm.StatePath, "--createek",
-		"--runas", vtpm.user, "--logfile", vtpm.getLogFile())
+		"--runas", vtpm.user, "--logfile", vtpm.getLogFile(),
+		"--not-overwrite")
 	if createCerts {
 		cmd.Args = append(cmd.Args, "--create-ek-cert", "--create-platform-cert", "--lock-nvram")
 	}
