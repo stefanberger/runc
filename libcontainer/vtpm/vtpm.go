@@ -23,6 +23,10 @@ type VTPM struct {
 	// The path where the TPM emulator writes the TPM state to
 	StatePath string `json:"statePath"`
 
+	// Whether we are allowed to delete the TPM's state path upon
+	// destroying the TPM or an outside mgmt. stack will do that
+	StatePathIsManaged bool `json:statePathIsManaged`
+
 	// Whether to create a certificate for the VTPM
 	CreateCerts bool `json:"createCerts"`
 
@@ -94,11 +98,13 @@ func vtpmx_ioctl(cmd, msg uintptr) error {
 // Create a new VTPM object
 //
 // @statepath: directory where the vTPM's state will be written into
+// @statepathismanaged: whether we are allowed to delete the TPM's state
+//                      path upon destroying the vTPM
 // @vtpmversion: The TPM version
 // @createcerts: whether to create certificates for the vTPM (on first start)
 //
 // After successful creation of the object the Start() method can be called
-func NewVTPM(statepath, vtpmversion string, createcerts bool) (*VTPM, error) {
+func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool) (*VTPM, error) {
 	if len(statepath) == 0 {
 		return nil, fmt.Errorf("Missing required statpath for vTPM.")
 	}
@@ -117,10 +123,11 @@ func NewVTPM(statepath, vtpmversion string, createcerts bool) (*VTPM, error) {
 
 	return &VTPM{
 		Tpm_dev_num: VTPM_DEV_NUM_INVALID,
-		user:        "tss",
-		StatePath:   statepath,
-		Vtpmversion: vtpmversion,
-		CreateCerts: createcerts,
+		user:               "tss",
+		StatePath:          statepath,
+		StatePathIsManaged: statepathismanaged,
+		Vtpmversion:        vtpmversion,
+		CreateCerts:        createcerts,
 	}, nil
 }
 
@@ -257,7 +264,10 @@ func (vtpm *VTPM) modifyModePath(dirPath string, mask, set os.FileMode) error {
 
 // Delete the directory where the TPM emaultor writes its state into
 func (vtpm *VTPM) DeleteStatePath() error {
-	return os.RemoveAll(vtpm.StatePath)
+	if !vtpm.StatePathIsManaged {
+		return os.RemoveAll(vtpm.StatePath)
+	}
+	return nil
 }
 
 // Create the TPM directory where it writes its state into; make it accessible
