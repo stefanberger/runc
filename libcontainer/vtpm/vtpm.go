@@ -72,6 +72,40 @@ const (
 	VTPM_FLAG_TPM2 = 1
 )
 
+// DupUp duplicates the given file descriptor and makes sure the returned
+// file descriptor is bigger than 'minfd'. This avoids problems when a file
+// descriptors with values 0, 1, and 2 are created (since std{in,out,err} are
+// closed) and we want to pass it to an external program (swtpm) that cannot
+// deal with having the standard file descriptors overwritten.
+//
+// Returns a copy of the given file descriptor that is guaranteed to
+// be '>= minfd'.
+// The caller must close both file descriptors unless closefd is set to true.
+func dupUp(fd, minfd int, closefd bool) (int, error) {
+	var err error
+	ret := -1
+	fds := make([]int, minfd + 1)
+
+	i := 0
+
+	for ; i < minfd; i++ {
+		ret, err = syscall.Dup(fd)
+		if ret >= minfd || err != nil {
+			if closefd {
+				fds[i] = fd
+			}
+			break
+		}
+		fds[i] = ret;
+	}
+
+	for i--;i >= 0; i-- {
+		os.NewFile(uintptr(fds[i]), "").Close()
+	}
+
+	return ret, err
+}
+
 func ioctl(fd, cmd, msg uintptr) error {
 	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, fd, cmd, msg)
 	if errno != 0 {
@@ -164,6 +198,20 @@ func (vtpm *VTPM) createDev() error {
 	vtpm.fd = vtpm_proxy_new_dev.fd
 	vtpm.major = vtpm_proxy_new_dev.major
 	vtpm.minor = vtpm_proxy_new_dev.minor
+
+	// 3 should be enough, but when running this with docker-ce 17.06
+	// it is not enough; 7 seems to be enough, but we want to be sure...
+	MINFD := 10
+	if int(vtpm.fd) < MINFD {
+		tpmfd, err := dupUp(int(vtpm.fd), MINFD, true)
+		if err != nil {
+			return err
+		}
+		if tpmfd < 0 {
+			return fmt.Errorf("tpmfd = %d, vtpm.fd = %d", tpmfd, vtpm.fd)
+		}
+		vtpm.fd = int32(tpmfd)
+	}
 
 	return nil
 }
