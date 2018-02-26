@@ -146,9 +146,11 @@ func (vtpm *VTPM) GetAnonFD() int32 {
 //                      path upon destroying the vTPM
 // @vtpmversion: The TPM version
 // @createcerts: whether to create certificates for the vTPM (on first start)
+// @runas: the account under which to run the swtpm; TPM 1.2 should be run
+//         with account tss; TPM 2 has more flexibility
 //
 // After successful creation of the object the Start() method can be called
-func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool) (*VTPM, error) {
+func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string) (*VTPM, error) {
 	if len(statepath) == 0 {
 		return nil, fmt.Errorf("Missing required statpath for vTPM.")
 	}
@@ -165,9 +167,13 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		return nil, fmt.Errorf("VTPM device driver not available.")
 	}
 
+	if runas == "" {
+		runas = "root"
+	}
+
 	return &VTPM{
 		Tpm_dev_num: VTPM_DEV_NUM_INVALID,
-		user:               "root",
+		user:               runas,
 		StatePath:          statepath,
 		StatePathIsManaged: statepathismanaged,
 		Vtpmversion:        vtpmversion,
