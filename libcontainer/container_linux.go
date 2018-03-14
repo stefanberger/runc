@@ -1709,6 +1709,11 @@ func (c *linuxContainer) bootstrapData(cloneFlags uintptr, nsMaps map[configs.Na
 		})
 	}
 
+	r.AddData(&Int64msg{
+		Type: ContainerIdAttr,
+		Value: uint64(12345654321),
+	})
+
 	// write custom namespace paths
 	if len(nsMaps) > 0 {
 		nsPaths, err := c.orderNamespacePaths(nsMaps)

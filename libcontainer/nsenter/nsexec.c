@@ -15,6 +15,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <unistd.h>
+#include <inttypes.h>
 
 #include <sys/ioctl.h>
 #include <sys/prctl.h>
@@ -89,6 +90,9 @@ struct nlconfig_t {
 	char *gidmappath;
 	size_t gidmappath_len;
 
+	/* containerid for newer kernels */
+	uint64_t containerid;
+
 	/* vTPM file descriptor */
 	int32_t vtpmfd;
 };
@@ -111,6 +115,7 @@ struct nlconfig_t {
 #define UIDMAPPATH_ATTR	    27288
 #define GIDMAPPATH_ATTR	    27289
 #define VTPMFD_ATTR		27290
+#define CONTAINERID_ATTR	27291
 
 /*
  * Use the raw syscall for versions of glibc which don't include a function for
@@ -378,6 +383,11 @@ static int nsflag(char *name)
 	return 0;
 }
 
+static uint64_t readint64(char *buf)
+{
+	return *(uint64_t *) buf;
+}
+
 static uint32_t readint32(char *buf)
 {
 	return *(uint32_t *) buf;
@@ -461,6 +471,9 @@ static void nl_parse(int fd, struct nlconfig_t *config)
 			break;
 		case VTPMFD_ATTR:
 			config->vtpmfd = readint32(current);
+			break;
+		case CONTAINERID_ATTR:
+			config->containerid = readint64(current);
 			break;
 		default:
 			bail("unknown netlink message type %d", nlattr->nla_type);
@@ -547,6 +560,34 @@ void ima_namespace_set_vtpm(int vtpmfd)
 	if (n && n != ENOTTY) {
 		bail("Error transferring VTPM to IMA: %s", strerror(errno));
 	}
+}
+
+int setup_containerid(pid_t childpid, uint64_t containerid)
+{
+	char path[PATH_MAX];
+	int fd;
+	char string[12];
+
+	if (containerid == 0)
+		return 0;
+
+	snprintf(path, sizeof(path), "/proc/%u/containerid", childpid);
+	snprintf(string, sizeof(string), "%"PRIu64, containerid);
+
+	fd = open(path, O_WRONLY);
+	if (fd < 0) {
+		switch (errno) {
+		case EEXIST:
+			/* file does not exists; that's ok */
+			return 0;
+		default:
+			return -1;
+		}
+	}
+	write(fd, string, strlen(string));
+	close(fd);
+
+	return 0;
 }
 
 void nsexec(void)
@@ -673,6 +714,8 @@ void nsexec(void)
 			if (child < 0)
 				bail("unable to fork: child_func");
 
+			if (setup_containerid(child, config.containerid) < 0)
+				bail("could not write container id");
 			/*
 			 * State machine for synchronisation with the children.
 			 *
