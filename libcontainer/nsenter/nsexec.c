@@ -577,7 +577,7 @@ int setup_containerid(pid_t childpid, uint64_t containerid)
 	fd = open(path, O_WRONLY);
 	if (fd < 0) {
 		switch (errno) {
-		case EEXIST:
+		case ENOENT:
 			/* file does not exists; that's ok */
 			return 0;
 		default:
