@@ -528,6 +528,21 @@ void join_namespaces(char *nslist)
 	free(namespaces);
 }
 
+int setup_ima_namespace(void)
+{
+	int n, ret = 0;
+	int fd = open("/sys/kernel/security/ima/unshare", O_WRONLY);
+	if (fd < 0)
+		return 0;
+	n = write(fd, "1", 1);
+	if (n != 1)
+		ret = -1;
+
+	close(fd);
+
+	return ret;
+}
+
 void nsexec(void)
 {
 	int pipenum;
@@ -807,6 +822,9 @@ void nsexec(void)
 			 */
 			if (config.namespaces)
 				join_namespaces(config.namespaces);
+
+			if (setup_ima_namespace() < 0)
+				bail("could not create an IMA namespace");
 
 			/*
 			 * Deal with user namespaces first. They are quite special, as they

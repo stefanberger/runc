@@ -190,6 +190,8 @@ const (
 	UserNamespace = "user"
 	// CgroupNamespace for isolating cgroup hierarchies
 	CgroupNamespace = "cgroup"
+	// IMANamespace for isolating IMA
+	IMANamespace = "ima"
 )
 
 // LinuxIDMapping specifies UID/GID mappings
