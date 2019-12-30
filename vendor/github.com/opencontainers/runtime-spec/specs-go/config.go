@@ -347,7 +347,7 @@ type LinuxResources struct {
 	// Network restriction configuration
 	Network *LinuxNetwork `json:"network,omitempty"`
 	// VTPM configuration
-	VTPMs []VTPM `json:"vtpms"`
+	VTPMs []VTPM `json:"vtpms,omitempty"`
 }
 
 // LinuxDevice represents the mknod information for a Linux special device file
