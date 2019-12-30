@@ -112,7 +112,7 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 	}
 
 	if len(vtpmversion) == 0 {
-		vtpmversion = VTPM_VERSION_1_2
+		vtpmversion = VTPM_VERSION_2
 	}
 	if vtpmversion != VTPM_VERSION_1_2 && vtpmversion != VTPM_VERSION_2 {
 		return nil, fmt.Errorf("Unsupported VTPM version '%s'.", vtpmversion)
