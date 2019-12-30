@@ -326,6 +326,7 @@ type VTPM struct {
 	StatepathIsManaged bool `json:"statepathismanaged,omitempty"`
 	TPMVersion string `json:"vtpmversion,omitempty"`
 	CreateCertificates bool `json:"createcerts,omitempty"`
+	PcrBanks string `json:"pcrbanks,omitempty"`
 	Runas string `json:"runas,omitempty"`
 }
 
