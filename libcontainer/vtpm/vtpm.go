@@ -33,6 +33,9 @@ type VTPM struct {
 	// Version of the TPM
 	Vtpmversion string `json:"vtpmversion"`
 
+	// Set of active PCR banks
+	PcrBanks string `json:"pcrbanks"`
+
 	// The user under which to run the TPM emulator
 	user string
 
@@ -106,7 +109,7 @@ func vtpmx_ioctl(cmd, msg uintptr) error {
 //         with account tss; TPM 2 has more flexibility
 //
 // After successful creation of the object the Start() method can be called
-func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string) (*VTPM, error) {
+func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, createcerts bool, runas string, pcrbanks string) (*VTPM, error) {
 	if len(statepath) == 0 {
 		return nil, fmt.Errorf("Missing required statpath for vTPM.")
 	}
@@ -134,6 +137,7 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		StatePathIsManaged: statepathismanaged,
 		Vtpmversion:        vtpmversion,
 		CreateCerts:        createcerts,
+		PcrBanks:           pcrbanks,
 	}, nil
 }
 
@@ -327,6 +331,9 @@ func (vtpm *VTPM) setup(createCerts bool) error {
 
 	if vtpm.Vtpmversion == VTPM_VERSION_2 {
 		cmd.Args = append(cmd.Args, "--tpm2")
+		if len(vtpm.PcrBanks) > 0 {
+			cmd.Args = append(cmd.Args, "--pcr-banks", vtpm.PcrBanks)
+		}
 	}
 
 	// need to explicitly set TMPDIR
