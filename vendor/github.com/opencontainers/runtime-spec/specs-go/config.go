@@ -332,6 +332,16 @@ type LinuxRdma struct {
 	HcaObjects *uint32 `json:"hcaObjects,omitempty"`
 }
 
+// VTPM definition
+type VTPM struct {
+	Statepath string `json:"statepath,omitempty"`
+	StatepathIsManaged bool `json:"statepathismanaged,omitempty"`
+	TPMVersion string `json:"vtpmversion,omitempty"`
+	CreateCertificates bool `json:"createcerts,omitempty"`
+	PcrBanks string `json:"pcrbanks,omitempty"`
+	Runas string `json:"runas,omitempty"`
+}
+
 // LinuxResources has container runtime resource constraints
 type LinuxResources struct {
 	// Devices configures the device whitelist.
@@ -352,12 +362,16 @@ type LinuxResources struct {
 	// Limits are a set of key value pairs that define RDMA resource limits,
 	// where the key is device name and value is resource limits.
 	Rdma map[string]LinuxRdma `json:"rdma,omitempty"`
+	// VTPM configuration
+	VTPMs []VTPM `json:"vtpms,omitempty"`
 }
 
 // LinuxDevice represents the mknod information for a Linux special device file
 type LinuxDevice struct {
 	// Path to the device.
 	Path string `json:"path"`
+	// Path of passed-through device on host
+	Devpath string `json:"devpath"`
 	// Device type, block, char, etc.
 	Type string `json:"type"`
 	// Major is the device's major number.
