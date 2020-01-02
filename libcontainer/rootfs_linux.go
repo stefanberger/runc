@@ -612,7 +612,12 @@ func bindMountDeviceNode(dest string, node *configs.Device) error {
 
 // Creates the device node in the rootfs of the container.
 func createDeviceNode(rootfs string, node *configs.Device, bind bool) error {
-	dest := filepath.Join(rootfs, node.Path)
+	var dest string
+	if node.Devpath != "" {
+		dest = filepath.Join(rootfs, node.Devpath)
+	} else {
+		dest = filepath.Join(rootfs, node.Path)
+	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0755); err != nil {
 		return err
 	}

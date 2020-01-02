@@ -14,6 +14,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/configs"
 	"github.com/opencontainers/runc/libcontainer/seccomp"
 	libcontainerUtils "github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/vtpm"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"golang.org/x/sys/unix"
@@ -152,6 +153,7 @@ type CreateOpts struct {
 	Spec             *specs.Spec
 	RootlessEUID     bool
 	RootlessCgroups  bool
+	VTPMs            []*vtpm.VTPM
 }
 
 // CreateLibcontainerConfig creates a new libcontainer configuration from a
@@ -187,6 +189,7 @@ func CreateLibcontainerConfig(opts *CreateOpts) (*configs.Config, error) {
 		NoNewKeyring:    opts.NoNewKeyring,
 		RootlessEUID:    opts.RootlessEUID,
 		RootlessCgroups: opts.RootlessCgroups,
+		VTPMs:           opts.VTPMs,
 	}
 
 	exists := false
@@ -608,6 +611,7 @@ func createDevices(spec *specs.Spec, config *configs.Config) error {
 			device := &configs.Device{
 				Type:     dt,
 				Path:     d.Path,
+				Devpath:  d.Devpath,
 				Major:    d.Major,
 				Minor:    d.Minor,
 				FileMode: filemode,
