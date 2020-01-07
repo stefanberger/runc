@@ -3,6 +3,7 @@
 package vtpm
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -62,6 +63,9 @@ type VTPM struct {
 
 	// The AppArmor profile's full path
 	aaprofile string
+
+	// swtpm_setup features
+	swtpmSetupFeatures []string
 }
 
 // ioctl
@@ -121,6 +125,42 @@ func vtpmx_ioctl(cmd, msg uintptr) error {
 	return nil
 }
 
+// getSWTPMSetupCapabilities gets the capabilities map of swtpm_setup by invoking it with
+// --print-capabilities. It returns the array of feature strings.
+// This function returns an empty array if swtpm_setup does not support --print-capabilities.
+// Expected output looks like this:
+// { "type": "swtpm_setup", "features": [ "cmdarg-keyfile-fd", "cmdarg-pwdfile-fd" ] }
+func getSWTPMSetupFeatures() ([]string, error) {
+	caps := make(map[string]interface{})
+
+	cmd := exec.Command("swtpm_setup", "--print-capabilities")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, nil
+	}
+
+	err = json.Unmarshal([]byte(output), &caps)
+	if err != nil {
+		return nil, fmt.Errorf("Could not unmarshal output: %s: %v\n", output, err)
+	}
+
+	features, _ := caps["features"].([]interface{})
+	res := make([]string, 0)
+	for _, f := range features {
+		res = append(res, f.(string))
+	}
+	return res, nil
+}
+
+func swtpmSetupHasFeature(swtpmSetupFeatures []string, name string) bool {
+	for _, f := range swtpmSetupFeatures {
+		if name == f {
+			return true
+		}
+	}
+	return false
+}
+
 // Create a new VTPM object
 //
 // @statepath: directory where the vTPM's state will be written into
@@ -166,6 +206,11 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		runas = "root"
 	}
 
+	swtpmSetupFeatures, err := getSWTPMSetupFeatures()
+	if err != nil {
+		return nil, err
+	}
+
 	return &VTPM{
 		user:               runas,
 		StatePath:          statepath,
@@ -175,6 +220,7 @@ func NewVTPM(statepath string, statepathismanaged bool, vtpmversion string, crea
 		PcrBanks:           pcrbanks,
 		Tpm_dev_num:        VTPM_DEV_NUM_INVALID,
 		fd:                 ILLEGAL_FD,
+		swtpmSetupFeatures: swtpmSetupFeatures,
 	}, nil
 }
 
