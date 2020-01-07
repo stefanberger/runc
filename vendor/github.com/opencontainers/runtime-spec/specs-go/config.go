@@ -340,6 +340,7 @@ type VTPM struct {
 	CreateCertificates bool `json:"createcerts,omitempty"`
 	PcrBanks string `json:"pcrbanks,omitempty"`
 	Runas string `json:"runas,omitempty"`
+	EncryptionPassword string `json:"encryptionpassword,omitempty"`
 }
 
 // LinuxResources has container runtime resource constraints
