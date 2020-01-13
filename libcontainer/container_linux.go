@@ -25,6 +25,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/intelrdt"
 	"github.com/opencontainers/runc/libcontainer/system"
 	"github.com/opencontainers/runc/libcontainer/utils"
+	"github.com/opencontainers/runc/libcontainer/vtpm/vtpm-helper"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	criurpc "github.com/checkpoint-restore/go-criu/rpc"
@@ -372,6 +373,11 @@ func (c *linuxContainer) start(process *Process) error {
 					}
 					return newSystemErrorWithCausef(err, "running poststart hook %d", i)
 				}
+			}
+		}
+		if len(c.config.VTPMs) > 0 {
+			if err := vtpmhelper.ApplyCGroupVTPMs(c.config.VTPMs, c.cgroupManager); err != nil {
+				return err
 			}
 		}
 	}
